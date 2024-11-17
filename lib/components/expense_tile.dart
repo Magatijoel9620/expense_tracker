@@ -3,7 +3,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 
 // ignore: must_be_immutable
 class ExpenseTile extends StatelessWidget {
-  ExpenseTile(
+  const ExpenseTile(
       {super.key,
       required this.name,
       required this.amount,
