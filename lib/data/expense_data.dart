@@ -38,7 +38,7 @@ class ExpenseData extends ChangeNotifier {
   }
 
   //edit expense
-  void updateExpense(ExpenseItem newExpense) {
+  void updateExpense(ExpenseItem newExpense, ExpenseItem originalExpense) {
     overallExpenseList.add(newExpense);
     notifyListeners();
     db.saveData(overallExpenseList);
