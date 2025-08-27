@@ -1,9 +1,11 @@
 import 'package:expense_tracker/components/expense_summary.dart';
 import 'package:expense_tracker/components/expense_tile.dart';
 import 'package:expense_tracker/models/expense_item.dart';
+import 'package:expense_tracker/theme_provider.dart'; // Import ThemeProvider
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../auth/auth_service.dart';
 import '../data/expense_data.dart';
 
 class HomePage extends StatefulWidget {
@@ -14,7 +16,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // TEXT CONTROLLERS
   final newExpenseNameController = TextEditingController();
   final newExpenseDollarController = TextEditingController();
   final newExpenseCentsController = TextEditingController();
@@ -22,47 +23,42 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-
-    //prepare data on startup
+    // Access providers using Provider.of within initState or didChangeDependencies
+    // It's generally safer to do this in didChangeDependencies if you need context extensively,
+    // but for one-off calls like this, initState is fine as long as listen: false.
     Provider.of<ExpenseData>(context, listen: false).prepareData();
   }
 
-  // At the top of your _HomePageState class, or in a separate widget file
-
   void _showExpenseFormModal(BuildContext context, {ExpenseItem? expense}) {
-    // If 'expense' is not null, it's an edit operation
+    final theme = Theme.of(context); // Get theme for modal styling
     final bool isEditing = expense != null;
 
-    // Pre-fill controllers if editing
     if (isEditing) {
-      newExpenseNameController.text = expense.name;
-      // Assuming amount is stored as "dollars.cents" string
+      newExpenseNameController.text = expense!.name;
       List<String> amountParts = expense.amount.split('.');
       newExpenseDollarController.text = amountParts.isNotEmpty ? amountParts[0] : '';
       newExpenseCentsController.text = amountParts.length > 1 ? amountParts[1] : '';
     } else {
-      // Clear controllers for new expense
-      clear(); // Your existing clear method
+      clear();
     }
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Important for keyboard handling
+      isScrollControlled: true,
+      backgroundColor: theme.cardColor, // Use theme card color for modal background
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (BuildContext bc) {
-        // It's good practice to make the modal content a StatefulWidget
-        // if it has its own complex state or controllers not managed by the parent.
-        // For this example, we'll keep it simple and use parent's controllers.
+        // Use the context 'bc' from the builder for Theme.of(bc) if needed inside
         return Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(bc).viewInsets.bottom, // Adjust for keyboard
+            bottom: MediaQuery.of(bc).viewInsets.bottom,
             top: 20,
             left: 20,
             right: 20,
           ),
-          child: SingleChildScrollView( // To prevent overflow when keyboard appears
+          child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -70,23 +66,22 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   isEditing ? 'Edit Expense' : 'Add New Expense',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(bc).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 24),
-                // Expense Name
                 TextField(
                   controller: newExpenseNameController,
-                  autofocus: !isEditing, // Autofocus only for new expense
+                  autofocus: !isEditing,
                   decoration: InputDecoration(
                     labelText: 'Expense Name',
                     hintText: 'e.g., Coffee, Lunch',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     prefixIcon: const Icon(Icons.drive_file_rename_outline),
+                    // Consider theming for InputDecoration as well if needed
                   ),
                   textCapitalization: TextCapitalization.sentences,
                 ),
                 const SizedBox(height: 16),
-                // Expense Amount
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -102,9 +97,10 @@ class _HomePageState extends State<HomePage> {
                         keyboardType: TextInputType.number,
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
-                      child: Text('.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12.0),
+                      // Ensure this text color adapts if necessary, though it's usually neutral
+                      child: Text('.', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(bc).colorScheme.onSurface)),
                     ),
                     Expanded(
                       child: TextField(
@@ -113,9 +109,10 @@ class _HomePageState extends State<HomePage> {
                           labelText: 'Cents',
                           hintText: 'e.g., 50',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          // counterText: "", // To hide the counter if not desired
                         ),
                         keyboardType: TextInputType.number,
-                        maxLength: 2, // Max 2 digits for cents
+                        maxLength: 2,
                       ),
                     ),
                   ],
@@ -127,39 +124,36 @@ class _HomePageState extends State<HomePage> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    backgroundColor: Theme.of(bc).colorScheme.primary, // Use theme
+                    foregroundColor: Theme.of(bc).colorScheme.onPrimary, // Use theme
                   ),
                   onPressed: () {
                     if (isEditing) {
-                      _performEdit(expense); // Modified save logic for edit
+                      _performEdit(expense);
                     } else {
-                      save(); // Your existing save method
+                      save();
                     }
                   },
                 ),
                 const SizedBox(height: 8),
                 TextButton(
-                  child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.secondary)),
+                  child: Text('Cancel', style: TextStyle(color: Theme.of(bc).colorScheme.secondary)), // Use theme
                   onPressed: () {
-                    Navigator.pop(bc); // Close bottom sheet
-                    clear(); // Clear controllers
+                    Navigator.pop(bc);
+                    clear();
                   },
                 ),
-                const SizedBox(height: 10), // Space for keyboard
+                const SizedBox(height: 10), // For keyboard spacing
               ],
             ),
           ),
         );
       },
     ).whenComplete(() {
-      // Clear controllers when the sheet is dismissed,
-      // especially if not explicitly saved or cancelled.
       clear();
     });
   }
 
-// Modify your addNewExpense and editExpense methods to use this:
   void addNewExpense() {
     _showExpenseFormModal(context);
   }
@@ -168,14 +162,15 @@ class _HomePageState extends State<HomePage> {
     _showExpenseFormModal(context, expense: expense);
   }
 
-// New method for handling the edit logic from the modal
   void _performEdit(ExpenseItem? originalExpense) {
     if (originalExpense == null) return;
+
+    // Use Provider.of with listen:false for one-time actions in methods
+    final expenseDataProvider = Provider.of<ExpenseData>(context, listen: false);
 
     if (newExpenseNameController.text.isNotEmpty ||
         newExpenseDollarController.text.isNotEmpty ||
         newExpenseCentsController.text.isNotEmpty) {
-
       String name = newExpenseNameController.text.isNotEmpty
           ? newExpenseNameController.text
           : originalExpense.name;
@@ -184,35 +179,35 @@ class _HomePageState extends State<HomePage> {
           ? newExpenseDollarController.text
           : originalExpense.amount.split('.').first;
       String cents = newExpenseCentsController.text.isNotEmpty
-          ? newExpenseCentsController.text.padRight(2, '0') // Ensure two digits for cents
+          ? newExpenseCentsController.text.padRight(2, '0')
           : (originalExpense.amount.split('.').length > 1 ? originalExpense.amount.split('.')[1].padRight(2, '0') : "00");
 
       String amount = '$dollars.$cents';
 
       ExpenseItem updatedExpense = ExpenseItem(
-        // Important: If your ExpenseItem has an ID, you need to preserve it for updates
-        // id: originalExpense.id, // Assuming ExpenseItem has an ID
         name: name,
         amount: amount,
-        dateTime: DateTime.now(), // Or originalExpense.dateTime if you don't want to update timestamp
+        dateTime: DateTime.now(), // Or originalExpense.dateTime if not updating timestamp
       );
 
-      Provider.of<ExpenseData>(context, listen: false)
-          .updateExpense(updatedExpense, originalExpense); // You might need to pass the original to find it
+      expenseDataProvider.updateExpense(updatedExpense, originalExpense);
 
-      Navigator.pop(context); // Close modal
-      clear();
+      if (mounted) { // Check if the widget is still in the tree
+        Navigator.pop(context);
+        clear();
+      }
     }
   }
 
-// Modify save (for new expenses) to also check for non-empty cents, or default to .00
   void save() {
+    final expenseDataProvider = Provider.of<ExpenseData>(context, listen: false);
+
     if (newExpenseNameController.text.isNotEmpty &&
         newExpenseDollarController.text.isNotEmpty) {
       String cents = newExpenseCentsController.text.isEmpty
           ? "00"
-          : newExpenseCentsController.text.padLeft(2, '0'); // Ensure two digits
-      cents = cents.length > 2 ? cents.substring(0, 2) : cents; // Max 2 digits
+          : newExpenseCentsController.text.padLeft(2, '0');
+      cents = cents.length > 2 ? cents.substring(0, 2) : cents;
 
       String amount = '${newExpenseDollarController.text}.$cents';
 
@@ -221,152 +216,184 @@ class _HomePageState extends State<HomePage> {
         amount: amount,
         dateTime: DateTime.now(),
       );
-      Provider.of<ExpenseData>(context, listen: false)
-          .addNewExpense(newExpense);
+      expenseDataProvider.addNewExpense(newExpense);
 
-      Navigator.pop(context); // Close modal
-      clear();
-    } else {
-      // Optional: Show a snackbar or some feedback if fields are missing
+      if (mounted) {
+        Navigator.pop(context); // Close modal
+        clear();
+      }
+    } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in at least name and amount.')),
+        SnackBar(
+          content: const Text('Please fill in at least name and amount.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
 
-// Remove _editExpenseButton method as its logic is now in _performEdit
-
-
-  //delete expense
   void deleteExpense(ExpenseItem expense) {
     Provider.of<ExpenseData>(context, listen: false).deleteExpense(expense);
   }
 
-  //cancel
+  // cancel() and clear() methods remain the same
+
   void cancel() {
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
     clear();
   }
 
-  // clear controllers
   void clear() {
     newExpenseNameController.clear();
     newExpenseDollarController.clear();
     newExpenseCentsController.clear();
   }
 
-  @override
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // Use theme for colors
+    // Access the current theme and providers
+    final theme = Theme.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context); // For toggling
+    // No need to explicitly call Provider.of<ExpenseData> here if using Consumer below
 
     return Consumer<ExpenseData>(
-      builder: (BuildContext context, value, child) {
-        bool hasExpenses = value.getAllExpenseList().isNotEmpty;
+      builder: (BuildContext context, expenseDataValue, child) {
+        bool hasExpenses = expenseDataValue.getAllExpenseList().isNotEmpty;
 
         return Scaffold(
-          backgroundColor: theme.colorScheme.surfaceVariant.withOpacity(0.5), // Slightly off-white or themed background
+          backgroundColor: theme.colorScheme.surface, // Uses theme
           appBar: AppBar(
             title: const Text('Expense Tracker', style: TextStyle(fontWeight: FontWeight.bold)),
             centerTitle: true,
-            backgroundColor: theme.colorScheme.primary,
-            foregroundColor: theme.colorScheme.onPrimary,
-            elevation: 2.0,
-            shape: const RoundedRectangleBorder( // <--- Add this
+            // AppBar backgroundColor and foregroundColor are now primarily controlled by
+            // ThemeData's appBarTheme in main.dart (via ThemeProvider)
+            // backgroundColor: theme.colorScheme.primary, // Keep if you need specific override
+            // foregroundColor: theme.colorScheme.onPrimary, // Keep if you need specific override
+            elevation: 2.0, // This is fine
+            shape: const RoundedRectangleBorder( // This is fine
               borderRadius: BorderRadius.vertical(
                 bottom: Radius.circular(20),
               ),
             ),
-            // actions: [ // Optional: Add actions like filter or settings
-            //   IconButton(icon: Icon(Icons.filter_list), onPressed: () {}),
-            // ],
+            actions: [
+              IconButton(
+                icon: Icon(
+                  themeProvider.isDarkMode ? Icons.nightlight_round : Icons.wb_sunny_rounded,
+                  // Color can be explicitly set or rely on AppBar's foregroundColor/iconTheme
+                  // color: theme.colorScheme.onPrimary, // Already handled by AppBar's foreground
+                ),
+                tooltip: themeProvider.isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                onPressed: () {
+                  themeProvider.toggleTheme(!themeProvider.isDarkMode);
+                },
+              ),
+              // IconButton( // ADD SIGN OUT BUTTON
+              //   icon: const Icon(Icons.logout),
+              //   tooltip: 'Sign Out',
+              //   onPressed: () async {
+              //     final authService = Provider.of<AuthService>(context, listen: false);
+              //     await authService.signOut();
+              //     // AuthWrapper will handle navigation
+              //   },
+              // ),
+            ],
           ),
-          floatingActionButton: FloatingActionButton.extended( // Use extended FAB for better label
+          floatingActionButton: FloatingActionButton.extended(
             onPressed: addNewExpense,
-            backgroundColor: theme.colorScheme.secondary,
-            foregroundColor: theme.colorScheme.onSecondary,
+            // backgroundColor and foregroundColor are handled by the theme's colorScheme
+            // backgroundColor: theme.colorScheme.secondary,
+            // foregroundColor: theme.colorScheme.onSecondary,
             icon: const Icon(Icons.add_shopping_cart_rounded),
             label: const Text('Add Expense'),
             elevation: 4.0,
           ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat, // Or .endFloat
-          body: Column( // Use Column for better structure if AppBar is present
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Weekly summary - Consider giving it more visual prominence
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Card( // Wrap summary in a Card
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0), // Inner padding for card content
-                    child: ExpenseSummary(startOfWeek: value.startOfWeekDate()),
-                  ),
-                ),
-              ),
-
-              // Separator or Title for the list
-              if (hasExpenses)
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Text(
-                    'Recent Expenses',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurfaceVariant),
+                  padding: const EdgeInsets.all(12.0),
+                  child: Card(
+                    // Card color is theme.cardColor or theme.colorScheme.surface
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      // Pass the expenseDataValue from the Consumer
+                      child: ExpenseSummary(startOfWeek: expenseDataValue.startOfWeekDate()),
+                    ),
                   ),
                 ),
-
-              // Expense list or Empty State
-              Expanded( // Important: Make ListView take remaining space
-                child: hasExpenses
-                    ? ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 80), // Padding for FAB overlap
-                  itemCount: value.getAllExpenseList().length,
-                  itemBuilder: (context, index) {
-                    final expense = value.getAllExpenseList()[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                      child: ExpenseTile( // Ensure ExpenseTile is well-designed
-                        name: expense.name,
-                        amount: expense.amount,
-                        dateTime: expense.dateTime,
-                        deleteTapped: (p0) => deleteExpense(expense),
-                        editTapped: (p0) => editExpense(expense),
-                        // Consider passing the whole expense object to ExpenseTile
-                        // expense: expense,
-                      ),
-                    );
-                  },
-                )
-                    : _buildEmptyState(theme), // Show a nice empty state
-              ),
-            ],
+                if (hasExpenses)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                    child: Text(
+                      'Recent Expenses',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onBackground.withOpacity(0.8)), // Example: Slightly subdued onBackground
+                    ),
+                  ),
+                if (hasExpenses)
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 80), // For FAB overlap
+                    itemCount: expenseDataValue.getAllExpenseList().length,
+                    itemBuilder: (context, index) {
+                      final expense = expenseDataValue.getAllExpenseList()[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
+                        child: ExpenseTile( // ExpenseTile should internally use Theme.of(context)
+                          name: expense.name,
+                          amount: expense.amount,
+                          dateTime: expense.dateTime,
+                          deleteTapped: (p0) => deleteExpense(expense),
+                          editTapped: (p0) => editExpense(expense),
+                        ),
+                      );
+                    },
+                  )
+                else
+                // Pass the current theme to _buildEmptyState
+                  _buildEmptyState(theme),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-// Helper widget for empty state
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(ThemeData theme) { // Accept ThemeData
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: const EdgeInsets.all(32.0).copyWith(top: 50),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long_outlined, size: 80, color: theme.colorScheme.secondary.withOpacity(0.7)),
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 80,
+              color: theme.colorScheme.secondary.withOpacity(0.7), // Use theme color
+            ),
             const SizedBox(height: 20),
             Text(
               'No expenses yet!',
-              style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: theme.colorScheme.onBackground.withOpacity(0.9), // Use theme color
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               "Tap the 'Add Expense' button below to get started.",
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant.withOpacity(0.8)),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onBackground.withOpacity(0.7), // Use theme color
+              ),
             ),
           ],
         ),
@@ -374,3 +401,4 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
